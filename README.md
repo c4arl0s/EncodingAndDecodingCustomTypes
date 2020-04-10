@@ -106,6 +106,10 @@ struct LandMark: Codable {
 
 # 5. [Encode and Decode Manually](https://github.com/c4arl0s/EncodingAndDecodingCustomTypes#encodinganddecodingcustomtypes)
 
+- If you structure of your swift type differs from the structure of its encoded form, you can provide a custom implementation of Encodable and Decodable to define your own encoding and decoding logic.
+
+- In this example, the Coordinate structure is expanded to support an elevation property that is nested inside of an additionalInfo container:
+
 ```swift
 struct Coordinate {
     var latitude: Double
@@ -122,7 +126,13 @@ struct Coordinate {
         case elevation
     }
 }
+```
 
+- Because the encoded form of the Coordinae type contains a second level of nested information, the type's adoption of the Encodable and Decodable protocols uses two enumerations that each list the complete set of coding keys used on a particular level.
+
+- The  Coordinate structure is extended to conform to the Decodable protocol by implementing its required initializer, init(from:)
+
+```swift
 extension Coordinate: Decodable {
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -131,6 +141,25 @@ extension Coordinate: Decodable {
         
         let additionalInfo = try values.nestedContainer(keyedBy: AdditionalInfoKeys.self, forKey: .additionalInfo)
         elevation = try additionalInfo.decode(Double.self, forKey: .elevation)
+    }
+}
+```
+
+- The initializer populates a Coordinate instance by using methods on the Decoder instance it receives as a parameter. The Coordinate instance's two properties are initialized using the keyed container APIS provided by the Swift standard library.
+
+- This example shows how the Coordinate structure can be extended to conform to the Encodable protocol by implementing its required method, encode(to:)
+
+```swift
+extension Coordinate: Encodable {
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(latitude, forKey: .latitude)
+        try container.encode(longitude, forKey: .longitude)
+        
+        var additionalInfo = container.nestedContainer(keyedBy: AdditionalInfoKeys.self, forKey: .additionalInfo)
+        
+        try additionalInfo.encode(elevation, forKey: .elevation)
     }
 }
 ```
